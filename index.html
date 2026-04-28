@@ -3,19 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>營業額管理系統（手機優化版）</title>
+  <title>營業額管理系統 PRO</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: Arial;
       background: #f4f6f8;
       margin: 0;
-      padding: 12px;
+      padding: 10px;
     }
 
-    h1 {
-      text-align: center;
-      font-size: 20px;
-    }
+    h1 { text-align:center; font-size:20px; }
 
     .container {
       max-width: 900px;
@@ -23,183 +20,165 @@
       background: white;
       padding: 12px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
-    .row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    input {
-      flex: 1;
+    input, select {
       padding: 10px;
-      font-size: 16px;
+      font-size: 14px;
+      width: 100%;
+      margin-bottom: 8px;
     }
 
     button {
       padding: 10px;
       font-size: 14px;
-      cursor: pointer;
+      margin: 2px;
     }
 
-    .card {
-      background: #f9fafb;
-      padding: 10px;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
+    .row { display:flex; gap:6px; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 14px;
-    }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { border-bottom:1px solid #ddd; padding:6px; text-align:center; }
 
-    th, td {
-      border-bottom: 1px solid #ddd;
-      padding: 6px;
-      text-align: center;
-    }
+    .green { color:green; }
+    .red { color:red; }
 
-    .green { color: green; }
-    .red { color: red; }
-
-    .delete-btn {
-      background: #ff4d4d;
-      color: white;
-      border: none;
-      padding: 5px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-    }
+    .card { background:#f9fafb; padding:10px; margin-top:10px; border-radius:10px; }
   </style>
 </head>
 <body>
 
-<h1>營業額系統</h1>
+<h1>營業額系統 PRO</h1>
 
 <div class="container">
 
+  <!-- 使用者 -->
+  <input id="user" placeholder="輸入員工名稱（多使用者）" oninput="setUser()" />
+
+  <!-- 收入 -->
   <div class="row">
-    <input type="number" id="income" placeholder="今日收入">
+    <input id="income" type="number" placeholder="收入">
     <button onclick="addIncome()">＋收入</button>
   </div>
 
+  <!-- 支出 -->
   <div class="row">
-    <input type="number" id="expense" placeholder="額外支出">
+    <input id="expense" type="number" placeholder="支出">
+    <input id="expName" placeholder="支出名稱（例如：油錢/材料）">
     <button onclick="addExpense()">＋支出</button>
   </div>
 
+  <!-- 查詢日期 -->
+  <input type="date" id="filterDate" onchange="render()" />
+
   <div class="card">
-    <h3>今日</h3>
-    <p id="todayStats"></p>
+    <h3>今日 / 查詢結果</h3>
+    <div id="todayStats"></div>
   </div>
 
   <div class="card">
-    <h3>歷史紀錄</h3>
+    <h3>月總營業額</h3>
+    <div id="monthStats"></div>
+  </div>
+
+  <div class="card">
+    <h3>紀錄</h3>
+    <button onclick="undoDelete()">↩ 復原刪除</button>
     <table>
       <thead>
         <tr>
           <th>日期</th>
-          <th>收入</th>
-          <th>支出</th>
-          <th>淨額</th>
+          <th>類型</th>
+          <th>名稱</th>
+          <th>金額</th>
           <th>刪除</th>
         </tr>
       </thead>
-      <tbody id="historyTable"></tbody>
+      <tbody id="table"></tbody>
     </table>
   </div>
 
 </div>
 
 <script>
-  let data = JSON.parse(localStorage.getItem('salesData')) || [];
+let user = localStorage.getItem('user') || '';
+document.getElementById('user').value = user;
 
-  function save() {
-    localStorage.setItem('salesData', JSON.stringify(data));
-    render();
-  }
-
-  function getToday() {
-    return new Date().toISOString().split('T')[0];
-  }
-
-  function addIncome() {
-    let val = Number(document.getElementById('income').value);
-    if (!val) return;
-
-    let today = getToday();
-    let record = data.find(d => d.date === today);
-
-    if (!record) {
-      record = { date: today, income: 0, expense: 0 };
-      data.push(record);
-    }
-
-    record.income += val;
-    document.getElementById('income').value = '';
-
-    save();
-  }
-
-  function addExpense() {
-    let val = Number(document.getElementById('expense').value);
-    if (!val) return;
-
-    let today = getToday();
-    let record = data.find(d => d.date === today);
-
-    if (!record) {
-      record = { date: today, income: 0, expense: 0 };
-      data.push(record);
-    }
-
-    record.expense += val;
-    document.getElementById('expense').value = '';
-
-    save();
-  }
-
-  function deleteRecord(index) {
-    if (confirm('確定要刪除這筆紀錄嗎？')) {
-      data.splice(index, 1);
-      save();
-    }
-  }
-
-  function render() {
-    let today = getToday();
-    let todayData = data.find(d => d.date === today) || { income: 0, expense: 0 };
-
-    let net = todayData.income - todayData.expense;
-
-    document.getElementById('todayStats').innerHTML =
-      `收入：<span class="green">${todayData.income}</span> 元<br>` +
-      `支出：<span class="red">${todayData.expense}</span> 元<br>` +
-      `淨額：<b>${net}</b> 元`;
-
-    let table = document.getElementById('historyTable');
-    table.innerHTML = '';
-
-    data.slice().reverse().forEach((d, i) => {
-      let net = d.income - d.expense;
-      table.innerHTML += `
-        <tr>
-          <td>${d.date}</td>
-          <td class="green">${d.income}</td>
-          <td class="red">${d.expense}</td>
-          <td>${net}</td>
-          <td><button class="delete-btn" onclick="deleteRecord(${data.length - 1 - i})">刪</button></td>
-        </tr>
-      `;
-    });
-  }
-
+function setUser(){
+  user = document.getElementById('user').value;
+  localStorage.setItem('user', user);
   render();
+}
+
+let data = JSON.parse(localStorage.getItem('data_'+user)) || [];
+let lastDeleted = null;
+
+function save(){
+  localStorage.setItem('data_'+user, JSON.stringify(data));
+  render();
+}
+
+function getToday(){ return new Date().toISOString().split('T')[0]; }
+
+function addIncome(){
+  let v = +income.value;
+  if(!v) return;
+  data.push({date:getToday(),type:'收入',name:'',amount:v});
+  income.value=''; save();
+}
+
+function addExpense(){
+  let v = +expense.value;
+  if(!v) return;
+  data.push({date:getToday(),type:'支出',name:expName.value||'',amount:v});
+  expense.value=''; expName.value=''; save();
+}
+
+function del(i){
+  lastDeleted = data[i];
+  data.splice(i,1);
+  save();
+}
+
+function undoDelete(){
+  if(lastDeleted){
+    data.push(lastDeleted);
+    lastDeleted=null;
+    save();
+  }
+}
+
+function render(){
+  let f = filterDate.value;
+  let show = data.filter(d=>!f||d.date===f);
+
+  let today = getToday();
+  let t = data.filter(d=>d.date===today);
+  let income = t.filter(x=>x.type==='收入').reduce((a,b)=>a+b.amount,0);
+  let expense = t.filter(x=>x.type==='支出').reduce((a,b)=>a+b.amount,0);
+
+  todayStats.innerHTML = `收入 ${income} / 支出 ${expense} / 淨額 ${income-expense}`;
+
+  let month = new Date().toISOString().slice(0,7);
+  let m = data.filter(d=>d.date.startsWith(month));
+  let mi = m.filter(x=>x.type==='收入').reduce((a,b)=>a+b.amount,0);
+  let me = m.filter(x=>x.type==='支出').reduce((a,b)=>a+b.amount,0);
+  monthStats.innerHTML = `本月收入 ${mi} / 支出 ${me} / 淨額 ${mi-me}`;
+
+  table.innerHTML='';
+  show.slice().reverse().forEach((d,i)=>{
+    table.innerHTML+=`
+      <tr>
+        <td>${d.date}</td>
+        <td>${d.type}</td>
+        <td>${d.name||'-'}</td>
+        <td>${d.amount}</td>
+        <td><button onclick="del(${data.length-1-i})">刪</button></td>
+      </tr>`;
+  });
+}
+
+render();
 </script>
 
 </body>
