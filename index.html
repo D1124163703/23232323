@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>營業額管理系統（手機優化版）</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 12px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .card {
+      background: #f9fafb;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .green { color: green; }
+    .red { color: red; }
+
+    .delete-btn {
+      background: #ff4d4d;
+      color: white;
+      border: none;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>營業額系統</h1>
+
+<div class="container">
+
+  <div class="row">
+    <input type="number" id="income" placeholder="今日收入">
+    <button onclick="addIncome()">＋收入</button>
+  </div>
+
+  <div class="row">
+    <input type="number" id="expense" placeholder="額外支出">
+    <button onclick="addExpense()">＋支出</button>
+  </div>
+
+  <div class="card">
+    <h3>今日</h3>
+    <p id="todayStats"></p>
+  </div>
+
+  <div class="card">
+    <h3>歷史紀錄</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>日期</th>
+          <th>收入</th>
+          <th>支出</th>
+          <th>淨額</th>
+          <th>刪除</th>
+        </tr>
+      </thead>
+      <tbody id="historyTable"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  let data = JSON.parse(localStorage.getItem('salesData')) || [];
+
+  function save() {
+    localStorage.setItem('salesData', JSON.stringify(data));
+    render();
+  }
+
+  function getToday() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function addIncome() {
+    let val = Number(document.getElementById('income').value);
+    if (!val) return;
+
+    let today = getToday();
+    let record = data.find(d => d.date === today);
+
+    if (!record) {
+      record = { date: today, income: 0, expense: 0 };
+      data.push(record);
+    }
+
+    record.income += val;
+    document.getElementById('income').value = '';
+
+    save();
+  }
+
+  function addExpense() {
+    let val = Number(document.getElementById('expense').value);
+    if (!val) return;
+
+    let today = getToday();
+    let record = data.find(d => d.date === today);
+
+    if (!record) {
+      record = { date: today, income: 0, expense: 0 };
+      data.push(record);
+    }
+
+    record.expense += val;
+    document.getElementById('expense').value = '';
+
+    save();
+  }
+
+  function deleteRecord(index) {
+    if (confirm('確定要刪除這筆紀錄嗎？')) {
+      data.splice(index, 1);
+      save();
+    }
+  }
+
+  function render() {
+    let today = getToday();
+    let todayData = data.find(d => d.date === today) || { income: 0, expense: 0 };
+
+    let net = todayData.income - todayData.expense;
+
+    document.getElementById('todayStats').innerHTML =
+      `收入：<span class="green">${todayData.income}</span> 元<br>` +
+      `支出：<span class="red">${todayData.expense}</span> 元<br>` +
+      `淨額：<b>${net}</b> 元`;
+
+    let table = document.getElementById('historyTable');
+    table.innerHTML = '';
+
+    data.slice().reverse().forEach((d, i) => {
+      let net = d.income - d.expense;
+      table.innerHTML += `
+        <tr>
+          <td>${d.date}</td>
+          <td class="green">${d.income}</td>
+          <td class="red">${d.expense}</td>
+          <td>${net}</td>
+          <td><button class="delete-btn" onclick="deleteRecord(${data.length - 1 - i})">刪</button></td>
+        </tr>
+      `;
+    });
+  }
+
+  render();
+</script>
+
+</body>
+</html>
